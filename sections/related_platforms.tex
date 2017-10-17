@@ -1,0 +1,16 @@
+\subsection{Related Platforms}
+\label{sec:related_platforms}
+
+The concept of creating local ad-hoc networks with very little configuration has been present for several years.
+The first implementation that tried to bring the concept to Web developers came from \textit{Opera Labs} with \textit{Opera Unite}\footnote{http://www.operasoftware.com/press/releases/general/opera-unite-reinvents-the-web}.
+Announced in 2009, this implementation certainly did not receive appropriate attention and was archived soon after publishing.
+More recently in 2016, \textit{Google} presented their \textit{Nearby} project that enables Android devices to communicate with other closely located devices forming a peer-to-peer network.
+Initial service discovery is achieved through bluetooth.
+Obviously, Google's solution is mostly based on their own Android platform which basically makes it unpractical in the common scenario of participants with different operating systems.
+
+\textit{FlyWeb} is a Web API developed by the Mozilla Firefox community which enables clients of Web applications to publish a local server from within the browser.
+Building on the concept of zero-configuration networks and its mDNS/DNS-SD protocols~\cite{rfc6762, rfc6763}, the server advertises itself in the local network and can be discovered by other devices which become clients to the server by connecting via a HTTP or WebSocket connection.
+This essentially enables cross-device communication within a local-area network.
+
+For our approach, we decided for FlyWeb since it is open source and entirely based on Web technology which makes it widely available.
+We think that the idea of hosting an ad-hoc network from within a Web application in the browser has great potential and we think that applications for this network can benefit from graceful recovery upon disconnection of local servers.
