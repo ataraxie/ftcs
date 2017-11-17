@@ -46,10 +46,11 @@ Shippy.Storage = (function() {
     }
 
     function addFile(file, key) {
+        // TODO: During development, this may cause cache issues. Better leave it commented for now
         // Refrains from loading files already in the session storage
-        if (sessionStorage.getItem(key)) {
-            return;
-        }
+        // if (sessionStorage.getItem(key)) {
+        //     return;
+        // }
 
         var xhr = new XMLHttpRequest(),
             fileReader = new FileReader();
