@@ -1,0 +1,10 @@
+#connection-status {
+	width: 100px;
+	padding: 5px;
+	color: white;
+	background: red;
+}
+
+#connection-status.connected {
+	background: green;
+}

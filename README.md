@@ -6,7 +6,11 @@
 https://download-origin.cdn.mozilla.net/pub/firefox/nightly/2016/
 => 2016-08-28-00-40-09-mozilla-aurora
 
-2.) Shippy addon installed. Upload as file in Firefox: shippy-addon/shippy-addon.xpi
+2.) Shippy addon installed. Upload as file in Firefox: `shippy-addon/shippy-addon.xpi
+
+To install unsigned add-ons, access `about:config` and change `xpinstall.signatures.required` to `false`
+
+Once you do that, open the xpi file on Firefox Nightly build (`Cmd+O` or `Ctrl+O`). 
 
 ## Run the example
 

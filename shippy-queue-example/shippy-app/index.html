@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html data-flyweb-role="server">
+
+<head>
+    <title>Shippy Sample App</title>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" type="text/css" href="css/app.css">
+</head>
+
+<body>
+
+    <div id="main">
+        <!--<span>Hello world</span>-->
+        <div>Name: <span id="myname"></span></div>
+        <div>State: <span id="state"></span></div>
+        <a id="add-button" href="#">Add</a>
+        <a id="remove-button" href="#">Remove</a>
+        <div id="connection-status">Connected?</div>
+    </div>
+
+    <!-- Just for some DOM manipulation because I'm fast with jQuery -->
+    <script src="js/jquery.js"></script>
+    <!-- Just for some DOM manipulation because I'm fast with AngularJS 1.* -->
+    <script src="js/angular.min.js"></script>
+    <!-- Just a static util library that can be used by all Shippy modules -->
+    <script src="js/lib.js"></script>
+    <!-- The Shippy library hub -->
+    <script src="js/shippy.js"></script>
+    <!-- Only Shippy session storage stuff -->
+    <script src="js/shippy-storage.js"></script>
+    <!-- Only Shippy server related stuff -->
+    <script src="js/shippy-server.js"></script>
+    <!-- Only Shippy client related stuff -->
+    <script src="js/shippy-client.js"></script>
+    <!-- Our queue app that doesn't know what's going on in shippy -->
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>
