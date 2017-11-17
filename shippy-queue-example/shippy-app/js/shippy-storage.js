@@ -64,11 +64,9 @@ Shippy.Storage = (function() {
                 fileReader.onload = function (evt) {
                     var content = evt.target.result;
                     var mimeType = fileToMime(file);
-
                     var data = {mimeType: mimeType, content: content};
 
                     try {
-                        console.log("ship-storage updated with", key);
                         sessionStorage.setItem(key, JSON.stringify(data));
                     }
                     catch (e) {
@@ -93,10 +91,12 @@ Shippy.Storage = (function() {
         var scripts = document.getElementsByTagName('script');
         for (var i = 0; i < scripts.length; i++) {
             var script = scripts[i];
-            var file = script.src.replace(script.baseURI, '');
-            var key = '/'.concat(file);
+            if (script.src !== ""){
+                var file = script.src.replace(script.baseURI, '');
+                var key = '/'.concat(file);
 
-            addFile(script.src, key);
+                addFile(script.src, key);
+            }
         }
     }
 
@@ -118,9 +118,7 @@ Shippy.Storage = (function() {
         if (content) {
             let data = {mimeType: extToMimes['html'], content: content};
             sessionStorage.setItem('/', JSON.stringify(data));
-            console.log("ship-storage updated with", '/');
             sessionStorage.setItem('/index.html', JSON.stringify(data));
-            console.log("ship-storage updated with", '/index.html');
         } else {
             Lib.log('Initial HTML yet not loaded');
             setTimeout(addHtmls, 1000);
