@@ -190,6 +190,7 @@ let Shippy = (function() {
 	// When the document has loaded, we save the initial HTML such that it can be served by our Flyweb server.
 	window.onload = function() {
 		env.initialHtml = '<html data-flyweb-role="client">'+$('html').html()+'</html>';
+        Shippy.Storage.bootstrap();
 	};
 
 	// This will be the exposed interface. The global Shippy object.

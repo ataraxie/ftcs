@@ -116,7 +116,6 @@ Shippy.Server = (function() {
 			server.onwebsocket = onWebsocket;
 			server.onclose = onClose;
 			Lib.log(server);
-            Shippy.Storage.bootstrap();
 		}).catch(function(err) {
 			Lib.log("Error creating server", err);
 		});

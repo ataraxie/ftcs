@@ -57,8 +57,6 @@ Shippy.Client = (function() {
 		ws.addEventListener("error", function(e) {
 			Lib.log("CLIENT: ERROR");
 		});
-
-        Shippy.Storage.bootstrap();
 	}
 
 	// We as client are responsible for calling the app operations. Essentially this will become
