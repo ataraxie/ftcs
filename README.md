@@ -25,11 +25,14 @@ Flyweb server will be published. Its IP address will be shown in the command lin
 
 `Current Flyweb Service: {"serviceUrl":"206.12.64.224:62247","serviceName":"app"}`
 
+If you see a message like this one `Firefox can’t establish a connection to the server at ws://192.168.0.12:62181/` then, wait a few seconds before trying to connect to the server. 
+This message means that the server is still being published.
+
 The first tab where the server was started will now also become a client. Whenever a client is connected the colored
 box will become green. Otherwise it will be red.
 
 Take the IP:PORT pair and open it in a new tab. They will connect to each other and share the state (the queue and
-the successor list).
+the successor list). You can also use the default FlyWeb icon, though with this approach you will have the weirdo IP, e.g. `http://642ec34b-51cf-c94c-9448-cf435bc50d20/`
 
 Repeat this for a few tabs and names. Then close the first tab with the localhost:3000 address. The "next server"
 will become the new server and the other tabs will connect to it after some time. If you want to open new tabs and

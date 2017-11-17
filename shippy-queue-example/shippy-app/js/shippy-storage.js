@@ -113,14 +113,20 @@ Shippy.Storage = (function() {
     }
 
     function addHtmls() {
-        let data = {mimeType: extToMimes['html'], content: Shippy.internal.initialHtml()};
-        sessionStorage.setItem('/', JSON.stringify(data));
-        sessionStorage.setItem('/index.html', JSON.stringify(data));
-        //
-        //
-        //
-        //
-        // // default html page. Later on, if our FlyWeb server serves more html webpages, we could extend this function
+        let content = Shippy.internal.initialHtml();
+        if (content) {
+            let data = {mimeType: extToMimes['html'], content: content};
+            sessionStorage.setItem('/', JSON.stringify(data));
+            console.log("ship-storage updated with", '/');
+            sessionStorage.setItem('/index.html', JSON.stringify(data));
+            console.log("ship-storage updated with", '/index.html');
+        } else {
+            Lib.log('Initial HTML yet not loaded');
+            setTimeout(addHtmls, 1000);
+        }
+
+
+        // // // default html page. Later on, if our FlyWeb server serves more html webpages, we could extend this function
         // var htmls = [{path: '/', file: 'index.html'}, {path: '/index.html', file: 'index.html'}];
         // for (var i = 0; i < htmls.length; i++) {
         //     var html = htmls[i];
