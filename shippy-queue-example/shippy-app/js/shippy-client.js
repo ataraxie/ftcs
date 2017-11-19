@@ -22,8 +22,19 @@ Shippy.Client = (function() {
 		// The state was updated. If we don't have the double role we need to tell Shippy to update it's state.
 		stateupdate: function(body) {
 			Lib.log("Client route 'stateupdate' called", body);
+
+            let newVersion = body.state.version;
+			let currentVersion = Shippy.internal.version();
+
+			console.log("Current, New", currentVersion, newVersion);
+
 			if (!Shippy.internal.serving()) {
-				Shippy.internal.state(body.state);
+				if (currentVersion <= newVersion) {
+                    Shippy.internal.state(body.state);
+				} else {
+                    Lib.wsSend(ws, "_mostuptodate", {state: Shippy.internal.state()});
+                    return;
+				}
 			}
 			Shippy.internal.trigger("stateupdate", body.state);
 		}
@@ -40,6 +51,7 @@ Shippy.Client = (function() {
 			Shippy.internal.connected(true);
 		});
 
+		// TODO when I receive a message, I check whether I' the next successor such that I can send an ACK back
 		// Delegate a received message to the associated route.
 		ws.addEventListener("message", function(e) {
 			Lib.log("CLIENT: MESSAGE");
@@ -63,6 +75,9 @@ Shippy.Client = (function() {
 	// messages on our WS connection. Then on the server, the associated operations will be called with the
 	// current state and the params below as arguments.
 	function call(operationName, params) {
+		if (typeof Shippy.internal.clientId() !== 'undefined') {
+			params.clientId = Shippy.internal.clientId();
+		}
 		Lib.wsSend(ws, operationName, params);
 	}
 

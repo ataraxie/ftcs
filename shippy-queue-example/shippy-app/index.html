@@ -31,9 +31,9 @@
                 </h1>
                 <h3>Hello, {{me.name}}</h3>
 
-                <p>Click the join button to enter the queue; Click the leave button to exit the queue; A desktop
-                    notification
-                    will appear once a TA is apple to help you. Remember to ENABLE desktop notifications!</p>
+                <!--<p>Click the join button to enter the queue; Click the leave button to exit the queue; A desktop-->
+                    <!--notification-->
+                    <!--will appear once a TA is apple to help you. Remember to ENABLE desktop notifications!</p>-->
 
                 <button id="enableButton" type="button" class="btn btn-default"><span>Enable Notifications</span></button>
 
@@ -82,7 +82,13 @@
                 </tbody>
             </table>
         </div>
+        <hr>
+        <div class="container">
+            <span>{{state}}</span>
+        </div>
     </div>
+
+
 
     <!-- Just a static util library that can be used by all Shippy modules -->
     <script src="js/lib.js"></script>

@@ -31,7 +31,7 @@ app.controller('QueueCtrl', ['$scope', 'QueueService', function ($scope, QueueSe
 
 	// This is the client data
 	$scope.queue = [];
-    $scope.pwd = '';
+    $scope.state = {};
 
     $scope.add = function () {
         Shippy.call("add", $scope.me);
@@ -45,7 +45,8 @@ app.controller('QueueCtrl', ['$scope', 'QueueService', function ($scope, QueueSe
 
     $scope.updateQueue = function(state){
         $scope.queue = state.queue;
-        $scope.pwd = state.pwd;
+        $scope.state = JSON.stringify(state);
+
         console.log('AFTER SERVER UPDATE MY PWD IS', $scope.pwd);
         $scope.$apply();
 	};

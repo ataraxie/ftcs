@@ -18,8 +18,16 @@ Shippy.Server = (function() {
 			Shippy.internal.removeSuccessor(params.clientId);
 			// Should we trigger a broadcast here? I think I will always be the first client when I reveal
 			// myself but I'm not really sure.
-		}
+		},
+        _mostuptodate: function (state, params) {
+            Lib.log("Upon new connection, a client had the most up-to-date state", params.clientId);
+            Shippy.internal.state(params.state);
+        }
 	};
+
+	function updateVersion(route) {
+		return !route.startsWith("_");
+    }
 
 	function createOptions(mimeType, status) {
         status = status || 200;
@@ -41,6 +49,7 @@ Shippy.Server = (function() {
 
 	}
 
+	// TODO: replica synchronization
 	// Run through all WS connections and send the state.
 	function broadcastState() {
 		for (let clientId in wss) {
@@ -53,6 +62,7 @@ Shippy.Server = (function() {
 		let ws = event.accept(); // just accept all connections
 
 		Lib.log("SERVER: INITIAL");
+
 
 		// Open is the event when a the connection for a client is opened.
 		// Here we create the client ID and add the WS connection to our collection. Then we add the client ID to
@@ -69,14 +79,20 @@ Shippy.Server = (function() {
 			broadcastState();
 		});
 
+		// TODO Change broadcast based on the successorship list
+		// TODO: what if the successor dies?
 		// Whenever the server receives a message it calls the associated route that's extracted from the payload.
 		// The route will either be a mounted on from the app operations or a private _ one (e.g. _revealdoublerole).
 		ws.addEventListener("message", function(e) {
 			Lib.log("SERVER: MESSAGE");
 			let data = Lib.wsReceive(e);
 			let currentState = Shippy.internal.state();
+			if (updateVersion(data.route)){
+                Shippy.internal.updateVersion();
+			}
+
 			routes[data.route] && routes[data.route](currentState, data.body);
-			broadcastState();
+            broadcastState();
 		});
 
 		// When a client closed the connection we remove it from the succ list and broadcast the state.
@@ -119,7 +135,6 @@ Shippy.Server = (function() {
 		}).catch(function(err) {
 			Lib.log("Error creating server", err);
 		});
-
 	}
 
 	// Interface exposed as Shippy.Server

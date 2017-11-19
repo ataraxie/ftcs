@@ -16,7 +16,8 @@ let Shippy = (function() {
 	 */
 	let env = {
 		state: {
-			successors: []
+			successors: [],
+			version: 0,
 		},
 		currentFlywebService: null,
 		appName: null,
@@ -63,6 +64,14 @@ let Shippy = (function() {
 			Shippy.Server.becomeServer();
 		}
 	}
+
+	function updateVersion() {
+		env.state.version++;
+    }
+
+    function version() {
+		return env.state.version;
+    }
 
 	// Operation calls are actually delegated to the Client module since these are called from clients
 	function call(operationName, params) {
@@ -200,12 +209,14 @@ let Shippy = (function() {
 		on: on,
 		call: call,
 		internal: {
+			updateVersion: updateVersion,
 			trigger: trigger,
 			addSuccessor: addSuccessor,
 			removeSuccessor: removeSuccessor,
 			clearSuccessors: clearSuccessors,
 			connected: connected,
 			clientId: clientId,
+			version: version,
 			appName: appName,
 			appSpec: appSpec,
 			state: state,
