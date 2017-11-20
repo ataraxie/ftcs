@@ -6,6 +6,17 @@ Shippy.Client = (function() {
 	// Our (single) WS connection.
 	let ws;
 
+	function evaluate(data) {
+		if (typeof data.state !== 'undefined'){
+			return data;
+		} else {
+			routes[data.route] && routes[data.route](Shippy.internal.state(), data.body);
+            let result = {state: Shippy.internal.state()};
+            result.state.version = data.version;
+            return result;
+		}
+    }
+
 	// Our routes for messages received from the server. These will be called from WS message events.
 	let routes = {
 		// The server accepted us and gave us a clientId. We want to save this so we will know when we should
@@ -23,10 +34,10 @@ Shippy.Client = (function() {
 		stateupdate: function(body) {
 			Lib.log("Client route 'stateupdate' called", body);
 
+			body = evaluate(body);
+
             let newVersion = body.state.version;
 			let currentVersion = Shippy.internal.version();
-
-			console.log("Current, New", currentVersion, newVersion);
 
 			if (!Shippy.internal.serving()) {
 				if (currentVersion <= newVersion) {
@@ -69,15 +80,14 @@ Shippy.Client = (function() {
 		ws.addEventListener("error", function(e) {
 			Lib.log("CLIENT: ERROR");
 		});
+
+        routes = Object.assign(routes, Shippy.internal.appSpec().operations);
 	}
 
 	// We as client are responsible for calling the app operations. Essentially this will become
 	// messages on our WS connection. Then on the server, the associated operations will be called with the
 	// current state and the params below as arguments.
 	function call(operationName, params) {
-		if (typeof Shippy.internal.clientId() !== 'undefined') {
-			params.clientId = Shippy.internal.clientId();
-		}
 		Lib.wsSend(ws, operationName, params);
 	}
 

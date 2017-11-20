@@ -28,6 +28,11 @@ let Shippy = (function() {
 		isServing: null
 	};
 
+    const defaultWaitingTime = 24000; //ms
+    const decrementTime = 3000; //ms
+
+	let waitingTime = defaultWaitingTime;
+
 	// Listeners registered via Shippy.on(...)
 	let listeners = {};
 
@@ -167,6 +172,26 @@ let Shippy = (function() {
 		return env.initialHtml;
 	}
 
+    function resetWaitingTime() {
+        waitingTime = defaultWaitingTime;
+    }
+
+	function popUnreachableSuccessor() {
+        if (!env.currentFlywebService && !env.isConnected) {
+        	if (waitingTime <= 0 && env.state.successors[0] !== env.clientId){
+                Lib.log('A successor is unreachable.');
+                Lib.log("Poping successor from list: ", env.state.successors);
+                env.state.successors.splice(0, 1);
+                resetWaitingTime();
+                Lib.log("New successor from list:", env.state.successors);
+			} else {
+                waitingTime -= decrementTime;
+			}
+		}
+    }
+
+
+
 	// This is the event that's regularly triggered from our addon. It always contains a list of services with
 	// a serviceName and serviceUrl field.
 	// Unfortunately, this is not always up-to-date, so we are confronted with delays.
@@ -183,6 +208,7 @@ let Shippy = (function() {
 
 			// If a service was set and we are not already connected we want to become a client
 			if (env.currentFlywebService && !env.isConnected) {
+				resetWaitingTime();
 				Shippy.Client.becomeClient();
 			}
 			// If (a) there is currently no service for our name
@@ -190,7 +216,12 @@ let Shippy = (function() {
 			// and (c) we should become the next server based on the succ list etc.
 			// then really become the server
 			else if (!env.currentFlywebService && env.isConnected === false && shouldBecomeNextServer()) {
+                resetWaitingTime();
 				Shippy.Server.becomeServer();
+			}
+			// This means that I'm waiting and I' not the next server.
+			else  if (!env.currentFlywebService && !env.isConnected) {
+				popUnreachableSuccessor();
 			}
 		}
 		Lib.log('Current Flyweb Service: ' + JSON.stringify(env.currentFlywebService));

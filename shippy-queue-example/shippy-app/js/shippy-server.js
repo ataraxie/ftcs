@@ -21,12 +21,14 @@ Shippy.Server = (function() {
 		},
         _mostuptodate: function (state, params) {
             Lib.log("Upon new connection, a client had the most up-to-date state", params.clientId);
+            let successors = Shippy.internal.state().successors;
             Shippy.internal.state(params.state);
+            Shippy.internal.state().successors = successors;
         }
 	};
 
-	function updateVersion(route) {
-		return !route.startsWith("_");
+	function privateRoute(route) {
+		return route.startsWith("_");
     }
 
 	function createOptions(mimeType, status) {
@@ -56,6 +58,20 @@ Shippy.Server = (function() {
 			Lib.wsSend(wss[clientId], "stateupdate", { state: Shippy.internal.state() });
 		}
 	}
+
+    function broadcastOperation(ws, route, body) {
+        let data = { route: route, body: body, version: Shippy.internal.version() }
+        for (let clientId in wss) {
+
+            let dest = wss[clientId];
+            if (ws === dest){
+                data.origin = true;
+			} else {
+                data.origin = false;
+			}
+            Lib.wsSend(dest, "stateupdate", data);
+        }
+    }
 
 	// Called for all WS requests.
 	function onWebsocket(event) {
@@ -87,12 +103,16 @@ Shippy.Server = (function() {
 			Lib.log("SERVER: MESSAGE");
 			let data = Lib.wsReceive(e);
 			let currentState = Shippy.internal.state();
-			if (updateVersion(data.route)){
+			if (!privateRoute(data.route)){
                 Shippy.internal.updateVersion();
 			}
 
 			routes[data.route] && routes[data.route](currentState, data.body);
-            broadcastState();
+            if (!privateRoute(data.route)){
+                broadcastOperation(ws, data.route, data.body);
+			} else {
+            	broadcastState();
+			}
 		});
 
 		// When a client closed the connection we remove it from the succ list and broadcast the state.

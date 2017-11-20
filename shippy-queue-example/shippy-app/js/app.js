@@ -33,6 +33,9 @@ app.controller('QueueCtrl', ['$scope', 'QueueService', function ($scope, QueueSe
 	$scope.queue = [];
     $scope.state = {};
 
+    $scope.isSuccessor = '-';
+    $scope.clientID = '-';
+
     $scope.add = function () {
         Shippy.call("add", $scope.me);
     };
@@ -46,6 +49,8 @@ app.controller('QueueCtrl', ['$scope', 'QueueService', function ($scope, QueueSe
     $scope.updateQueue = function(state){
         $scope.queue = state.queue;
         $scope.state = JSON.stringify(state);
+        $scope.isSuccessor = Shippy.internal.shouldBecomeNextServer().toString();
+        $scope.clientID = Shippy.internal.clientId();
 
         console.log('AFTER SERVER UPDATE MY PWD IS', $scope.pwd);
         $scope.$apply();
