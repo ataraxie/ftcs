@@ -28,10 +28,13 @@ let Shippy = (function() {
 		isServing: null
 	};
 
-    const defaultWaitingTime = 24000; //ms
-    const decrementTime = 3000; //ms
+    const time = {
+    	defaultWaitingTime:  15000,
+        minDecrementTime: 	 1000,
+        maxDecrementTime: 	 4000
+    };
 
-	let waitingTime = defaultWaitingTime;
+	let waitingTime = time.defaultWaitingTime;
 
 	// Listeners registered via Shippy.on(...)
 	let listeners = {};
@@ -69,14 +72,6 @@ let Shippy = (function() {
 			Shippy.Server.becomeServer();
 		}
 	}
-
-	function updateVersion() {
-		env.state.version++;
-    }
-
-    function version() {
-		return env.state.version;
-    }
 
 	// Operation calls are actually delegated to the Client module since these are called from clients
 	function call(operationName, params) {
@@ -118,7 +113,36 @@ let Shippy = (function() {
 		env.state.successors = [];
 	}
 
-	// ========
+    function resetWaitingTime() {
+        waitingTime = time.defaultWaitingTime;
+    }
+
+    function updateVersion() {
+        env.state.version++;
+    }
+
+    // Random number in the interval of [1000 ms to 4000ms]
+    // Such that clients can try to become the next server and drop elements from the list faster than others
+    function decrementTime() {
+		return Math.random() * (time.maxDecrementTime - time.minDecrementTime) + time.minDecrementTime;
+    }
+
+    // Remove the first successor of the successors list if this successor does not become the new server after T seconds
+    function pruneUnreachableSuccessor() {
+        if (!env.currentFlywebService && !env.isConnected) {
+            if (waitingTime <= 0 && env.state.successors[0] !== env.clientId){
+                Lib.log('A successor is unreachable after T seconds. Removing first successor from the successor list', env.state.successors);
+                env.state.successors.splice(0, 1);
+                resetWaitingTime();
+
+            } else {
+                waitingTime -= decrementTime();
+            }
+        }
+    }
+
+
+    // ========
 	// Below are single-function getters/setters
 	// ========
 
@@ -172,25 +196,13 @@ let Shippy = (function() {
 		return env.initialHtml;
 	}
 
-    function resetWaitingTime() {
-        waitingTime = defaultWaitingTime;
+    function version() {
+        return env.state.version;
     }
 
-	function popUnreachableSuccessor() {
-        if (!env.currentFlywebService && !env.isConnected) {
-        	if (waitingTime <= 0 && env.state.successors[0] !== env.clientId){
-                Lib.log('A successor is unreachable.');
-                Lib.log("Poping successor from list: ", env.state.successors);
-                env.state.successors.splice(0, 1);
-                resetWaitingTime();
-                Lib.log("New successor from list:", env.state.successors);
-			} else {
-                waitingTime -= decrementTime;
-			}
-		}
-    }
-
-
+    // ========
+    // Below is the mDNS service discovery listener
+    // ========
 
 	// This is the event that's regularly triggered from our addon. It always contains a list of services with
 	// a serviceName and serviceUrl field.
@@ -219,9 +231,11 @@ let Shippy = (function() {
                 resetWaitingTime();
 				Shippy.Server.becomeServer();
 			}
-			// This means that I'm waiting and I' not the next server.
+			// If I' neither the next server, nor I'm connected I need to keep track of probable unreachable successors
+			// If after some time period now successor has assumed the server role, I need to update my successor list
+			// At some point, I'll be the next server, thus recovering from a chain of consecutive disconnections
 			else  if (!env.currentFlywebService && !env.isConnected) {
-				popUnreachableSuccessor();
+				pruneUnreachableSuccessor();
 			}
 		}
 		Lib.log('Current Flyweb Service: ' + JSON.stringify(env.currentFlywebService));
@@ -230,7 +244,7 @@ let Shippy = (function() {
 	// When the document has loaded, we save the initial HTML such that it can be served by our Flyweb server.
 	window.onload = function() {
 		env.initialHtml = '<html data-flyweb-role="client">'+$('html').html()+'</html>';
-        Shippy.Storage.init();
+        Shippy.Storage.init(); // Get files required to run this app and add them to the session storage.
 	};
 
 	// This will be the exposed interface. The global Shippy object.

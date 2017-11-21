@@ -20,13 +20,19 @@ Shippy.Server = (function() {
 			// myself but I'm not really sure.
 		},
         _mostuptodate: function (state, params) {
+            // This route is called when upon connection, a client signals that it has the most up-to-date state
+            // In that case, the server needs to make a copy of his list of successors and then, update the state based on what he received from the client
+            // This is not optimal. Ideally, instead of sending the most up-to-date state,
+			// the client sends missing operations that need to be added such that the server can reconstruct his state
             Lib.log("Upon new connection, a client had the most up-to-date state", params.clientId);
             let successors = Shippy.internal.state().successors;
+            // TODO: change from overriding the entire state to reconstructing the state based on a set of operations
             Shippy.internal.state(params.state);
             Shippy.internal.state().successors = successors;
         }
 	};
 
+	// Checks whether a route is private or not
 	function privateRoute(route) {
 		return route.startsWith("_");
     }
@@ -51,7 +57,6 @@ Shippy.Server = (function() {
 
 	}
 
-	// TODO: replica synchronization
 	// Run through all WS connections and send the state.
 	function broadcastState() {
 		for (let clientId in wss) {
@@ -60,7 +65,7 @@ Shippy.Server = (function() {
 	}
 
     function broadcastOperation(ws, route, body) {
-        let data = { route: route, body: body, version: Shippy.internal.version() }
+        let data = { route: route, payload: body, version: Shippy.internal.version() };
         for (let clientId in wss) {
 
             let dest = wss[clientId];
@@ -95,23 +100,25 @@ Shippy.Server = (function() {
 			broadcastState();
 		});
 
-		// TODO Change broadcast based on the successorship list
-		// TODO: what if the successor dies?
 		// Whenever the server receives a message it calls the associated route that's extracted from the payload.
 		// The route will either be a mounted on from the app operations or a private _ one (e.g. _revealdoublerole).
 		ws.addEventListener("message", function(e) {
 			Lib.log("SERVER: MESSAGE");
 			let data = Lib.wsReceive(e);
 			let currentState = Shippy.internal.state();
-			if (!privateRoute(data.route)){
-                Shippy.internal.updateVersion();
-			}
 
 			routes[data.route] && routes[data.route](currentState, data.body);
-            if (!privateRoute(data.route)){
+
+			// Now, instead of broadcasting the entire state, we can broadcast just an operation and the required payload to execute that operation
+			// Whenever we have a non private operation, we also update our server versioning such that clients can assess whether they have the most up-to-date state
+			// Sending a version number in the broadcast is essential to synchronize clients after a client becomes the new server
+			if (!privateRoute(data.route)) {
+                Shippy.internal.updateVersion();
                 broadcastOperation(ws, data.route, data.body);
-			} else {
-            	broadcastState();
+            } else {
+                // In some scenarios we still send the entire state
+				// later on we can send an array of operations such that the clients can reconstruct the state themselves
+                broadcastState();
 			}
 		});
 

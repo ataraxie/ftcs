@@ -3,98 +3,113 @@
  */
 Shippy.Client = (function() {
 
-	// Our (single) WS connection.
-	let ws;
+    // Our (single) WS connection.
+    let ws;
 
-	function evaluate(data) {
-		if (typeof data.state !== 'undefined'){
-			return data;
-		} else {
-			routes[data.route] && routes[data.route](Shippy.internal.state(), data.body);
-            let result = {state: Shippy.internal.state()};
-            result.state.version = data.version;
-            return result;
-		}
+    // I definitively could use a better name here.
+    function serverMostUpToDate(body) {
+        let currentVersion = Shippy.internal.version();
+        let serverVersion = body.version || body.state.version;
+
+        return currentVersion <= serverVersion;
     }
 
-	// Our routes for messages received from the server. These will be called from WS message events.
-	let routes = {
-		// The server accepted us and gave us a clientId. We want to save this so we will know when we should
-		// become the next server depending on the succ list.
-		welcome: function(body) {
-			Lib.log("Client route 'welcome' called", body);
-			Shippy.internal.clientId(body.clientId);
-			if (Shippy.internal.serving()) {
-				// If we have the double role, we should tell the server such that he removes us from the
-				// succ list.
-				Lib.wsSend(ws, "_revealdoublerole", {clientId: body.clientId});
-			}
-		},
-		// The state was updated. If we don't have the double role we need to tell Shippy to update it's state.
-		stateupdate: function(body) {
-			Lib.log("Client route 'stateupdate' called", body);
-
-			body = evaluate(body);
-
-            let newVersion = body.state.version;
-			let currentVersion = Shippy.internal.version();
-
-			if (!Shippy.internal.serving()) {
-				if (currentVersion <= newVersion) {
-                    Shippy.internal.state(body.state);
-				} else {
-                    Lib.wsSend(ws, "_mostuptodate", {state: Shippy.internal.state()});
-                    return;
-				}
-			}
-			Shippy.internal.trigger("stateupdate", body.state);
+    // Check if the payload carries the entire update or just an operation.
+    // Based on that, this function creates an update function callback that will be used to update the client state
+    // The callback either overrides the entire state, or updates the state/version based on a registered operation
+	function getUpdateFunc(body) {
+		if (typeof body.state !== 'undefined') {
+			return function () {
+                Shippy.internal.state(body.state);
+            };
 		}
-	};
+		return function () {
+            routes[body.route] && routes[body.route](Shippy.internal.state(), body.payload);
+            Shippy.internal.state().version = body.version;
+        };
+    }
 
-	// Become a Shippy client. When this is called there must be already a current Flyweb service available
-	// and its URL will be used for the WS connection.
-	function becomeClient() {
-		ws = new WebSocket("ws://" + Shippy.internal.currentFlywebService().serviceUrl);
+    // it will check whether the server has a state newer then the client
+    // If it does, it will apply the state update function
+    // Otherwise, it will send a _mostuptodate message back to the server
+    function updateState(serverMostUpToDate, updateFunc) {
+        if (serverMostUpToDate){
+            updateFunc();
+        } else {
+            Lib.wsSend(ws, "_mostuptodate", {state: Shippy.internal.state()});
+        }
+    }
 
-		// Tell shippy that we are now connected.
-		ws.addEventListener("open", function(e) {
-			Lib.log("CLIENT: OPEN");
-			Shippy.internal.connected(true);
-		});
+    // Our routes for messages received from the server. These will be called from WS message events.
+    let routes = {
+        // The server accepted us and gave us a clientId. We want to save this so we will know when we should
+        // become the next server depending on the succ list.
+        welcome: function(body) {
+            Lib.log("Client route 'welcome' called", body);
+            Shippy.internal.clientId(body.clientId);
+            if (Shippy.internal.serving()) {
+                // If we have the double role, we should tell the server such that he removes us from the
+                // succ list.
+                Lib.wsSend(ws, "_revealdoublerole", {clientId: body.clientId});
+            }
+        },
+        // The state was updated. If we don't have the double role we need to tell Shippy to update it's state.
+        stateupdate: function(body) {
+            Lib.log("Client route 'stateupdate' called", body);
 
-		// TODO when I receive a message, I check whether I' the next successor such that I can send an ACK back
-		// Delegate a received message to the associated route.
-		ws.addEventListener("message", function(e) {
-			Lib.log("CLIENT: MESSAGE");
-			let data = Lib.wsReceive(e);
-			routes[data.route] && routes[data.route](data.body);
-		});
+            if (!Shippy.internal.serving()) {
+            	let updateFunc = getUpdateFunc(body);
+            	updateState(serverMostUpToDate(body), updateFunc);
+            }
+            Shippy.internal.trigger("stateupdate", Shippy.internal.state());
+        }
+    };
 
-		// Tell shippy that we are now disconnected.
-		ws.addEventListener("close", function(e) {
-			Lib.log("CLIENT: CLOSE");
-			Shippy.internal.connected(false);
-		});
-
-		// Don't really know what to do here
-		ws.addEventListener("error", function(e) {
-			Lib.log("CLIENT: ERROR");
-		});
-
+    // Become a Shippy client. When this is called there must be already a current Flyweb service available
+    // and its URL will be used for the WS connection.
+    function becomeClient() {
+        // Mount the routes for the app operations onto our WS routes.
+        // This is necessary in the client because state updates may carry operations rather than the entire state
         routes = Object.assign(routes, Shippy.internal.appSpec().operations);
-	}
 
-	// We as client are responsible for calling the app operations. Essentially this will become
-	// messages on our WS connection. Then on the server, the associated operations will be called with the
-	// current state and the params below as arguments.
-	function call(operationName, params) {
-		Lib.wsSend(ws, operationName, params);
-	}
+        ws = new WebSocket("ws://" + Shippy.internal.currentFlywebService().serviceUrl);
 
-	// Interface exposed as Shippy.Client
-	return {
-		becomeClient: becomeClient,
-		call: call
-	};
+        // Tell shippy that we are now connected.
+        ws.addEventListener("open", function(e) {
+            Lib.log("CLIENT: OPEN");
+            Shippy.internal.connected(true);
+        });
+
+        // Delegate a received message to the associated route.
+        ws.addEventListener("message", function(e) {
+            Lib.log("CLIENT: MESSAGE");
+            let data = Lib.wsReceive(e);
+            routes[data.route] && routes[data.route](data.body);
+        });
+
+        // Tell shippy that we are now disconnected.
+        ws.addEventListener("close", function(e) {
+            Lib.log("CLIENT: CLOSE");
+            Shippy.internal.connected(false);
+        });
+
+        // Don't really know what to do here
+        ws.addEventListener("error", function(e) {
+            Lib.log("CLIENT: ERROR");
+        });
+    }
+
+    // We as client are responsible for calling the app operations. Essentially this will become
+    // messages on our WS connection. Then on the server, the associated operations will be called with the
+    // current state and the params below as arguments.
+    function call(operationName, params) {
+        Lib.wsSend(ws, operationName, params);
+    }
+
+    // Interface exposed as Shippy.Client
+    return {
+        becomeClient: becomeClient,
+        call: call
+    };
 
 }());
