@@ -90,7 +90,7 @@ Shippy.Server = (function () {
 		// our successor list (if this client has also the server role this id will be removed later when the
 		// _revealdoublerole route is called from this client). We send a welcome message to the client containing
 		// the clientId. We also broadcast the state because the contained successor list changed.
-		ws.addEventListener("open", function (e) {
+		ws.addEventListener("open", function(e) {
 			Lib.log("SERVER: OPEN");
 			let clientId = new Date().getTime();
 			ws.clientId = clientId;
@@ -102,7 +102,7 @@ Shippy.Server = (function () {
 
 		// Whenever the server receives a message it calls the associated route that's extracted from the payload.
 		// The route will either be a mounted on from the app operations or a private _ one (e.g. _revealdoublerole).
-		ws.addEventListener("message", function (e) {
+		ws.addEventListener("message", function(e) {
 			Lib.log("SERVER: MESSAGE");
 			let data = Lib.wsReceive(e);
 			let currentState = Shippy.internal.state();
@@ -123,7 +123,7 @@ Shippy.Server = (function () {
 		});
 
 		// When a client closed the connection we remove it from the succ list and broadcast the state.
-		ws.addEventListener("close", function (e) {
+		ws.addEventListener("close", function(e) {
 			Lib.log("SERVER: CLOSE");
 			if (ws.clientId) {
 				delete wss[ws.clientId];
@@ -133,7 +133,7 @@ Shippy.Server = (function () {
 		});
 
 		// Don't really know what to do here
-		ws.addEventListener("error", function (e) {
+		ws.addEventListener("error", function(e) {
 			Lib.log("SERVER: ERROR");
 		});
 
@@ -149,7 +149,7 @@ Shippy.Server = (function () {
 		routes = Object.assign(routes, Shippy.internal.appSpec().operations);
 		Lib.log("BECOME SERVER");
 		// Now REALLY become the server!
-		navigator.publishServer(Shippy.internal.appName()).then(function (server) {
+		navigator.publishServer(Shippy.internal.appName()).then(function(server) {
 			Lib.log("New Server created for app:", Shippy.internal.appName());
 			// When we have a new server we want to start with a fresh succ list.
 			Shippy.internal.clearSuccessors();

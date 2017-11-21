@@ -6,6 +6,31 @@ Shippy.Client = (function() {
     // Our (single) WS connection.
     let ws;
 
+	// Our routes for messages received from the server. These will be called from WS message events.
+	let routes = {
+		// The server accepted us and gave us a clientId. We want to save this so we will know when we should
+		// become the next server depending on the succ list.
+		welcome: function(body) {
+			Lib.log("Client route 'welcome' called", body);
+			Shippy.internal.clientId(body.clientId);
+			if (Shippy.internal.serving()) {
+				// If we have the double role, we should tell the server such that he removes us from the
+				// succ list.
+				Lib.wsSend(ws, "_revealdoublerole", {clientId: body.clientId});
+			}
+		},
+		// The state was updated. If we don't have the double role we need to tell Shippy to update it's state.
+		stateupdate: function(body) {
+			Lib.log("Client route 'stateupdate' called", body);
+
+			if (!Shippy.internal.serving()) {
+				let updateFunc = getUpdateFunc(body);
+				updateState(serverMostUpToDate(body), updateFunc);
+			}
+			Shippy.internal.trigger("stateupdate", Shippy.internal.state());
+		}
+	};
+
     // I definitively could use a better name here.
     function serverMostUpToDate(body) {
         let currentVersion = Shippy.internal.version();
@@ -39,31 +64,6 @@ Shippy.Client = (function() {
             Lib.wsSend(ws, "_mostuptodate", {state: Shippy.internal.state()});
         }
     }
-
-    // Our routes for messages received from the server. These will be called from WS message events.
-    let routes = {
-        // The server accepted us and gave us a clientId. We want to save this so we will know when we should
-        // become the next server depending on the succ list.
-        welcome: function(body) {
-            Lib.log("Client route 'welcome' called", body);
-            Shippy.internal.clientId(body.clientId);
-            if (Shippy.internal.serving()) {
-                // If we have the double role, we should tell the server such that he removes us from the
-                // succ list.
-                Lib.wsSend(ws, "_revealdoublerole", {clientId: body.clientId});
-            }
-        },
-        // The state was updated. If we don't have the double role we need to tell Shippy to update it's state.
-        stateupdate: function(body) {
-            Lib.log("Client route 'stateupdate' called", body);
-
-            if (!Shippy.internal.serving()) {
-            	let updateFunc = getUpdateFunc(body);
-            	updateState(serverMostUpToDate(body), updateFunc);
-            }
-            Shippy.internal.trigger("stateupdate", Shippy.internal.state());
-        }
-    };
 
     // Become a Shippy client. When this is called there must be already a current Flyweb service available
     // and its URL will be used for the WS connection.
