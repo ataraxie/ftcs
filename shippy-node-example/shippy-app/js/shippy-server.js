@@ -3,12 +3,6 @@
  */
 Shippy.Server = (function() {
 
-	let mimeTypes = {
-		css: "text/css",
-		js: "application/javascript",
-		jpg: "image/jpeg"
-	};
-
 	// Dictionary of web socket connections in form clientId => websocket object
 	let wss = {};
 
@@ -24,11 +18,23 @@ Shippy.Server = (function() {
 			Shippy.internal.removeSuccessor(params.clientId);
 			// Should we trigger a broadcast here? I think I will always be the first client when I reveal
 			// myself but I'm not really sure.
-		}
+		},
+        _mostuptodate: function (state, params) {
+            Lib.log("Upon new connection, a client had the most up-to-date state", params.clientId);
+            let successors = Shippy.internal.state().successors;
+            Shippy.internal.state(params.state);
+            Shippy.internal.state().successors = successors;
+        }
 	};
 
-	function createOptions(mimeType) {
+	function privateRoute(route) {
+		return route.startsWith("_");
+    }
+
+	function createOptions(mimeType, status) {
+        status = status || 200;
 		return {
+            status: status,
 			headers: { 'Content-Type': mimeType }
 		};
 	}
@@ -36,20 +42,16 @@ Shippy.Server = (function() {
 	function onFetch(event) {
 		Lib.log("ONFETCH");
 		let url = event.request.url;
-		if (url !== "/") {
-			let filename = url.split("/").pop();
-			let fileExtension = filename.split(".").pop();
-			let mimeType = mimeTypes[fileExtension];
-			let options = createOptions(mimeType);
-			fetch(url)
-				.then(response => response.blob())
-				.then(blob => event.respondWith(new Response(blob, createOptions(mimeType))));
+		let file = Shippy.Storage.get(url);
+		if (file){
+			event.respondWith(new Response(file.content, createOptions(file.mimeType)));
 		} else {
-			let options = createOptions("text/html");
-			event.respondWith(new Response(Shippy.internal.initialHtml(), options));
+            event.respondWith(new Response({}, createOptions('application/json', 404)));
 		}
+
 	}
 
+	// TODO: replica synchronization
 	// Run through all WS connections and send the state.
 	function broadcastState() {
 		for (let clientId in wss) {
@@ -57,11 +59,26 @@ Shippy.Server = (function() {
 		}
 	}
 
+    function broadcastOperation(ws, route, body) {
+        let data = { route: route, body: body, version: Shippy.internal.version() }
+        for (let clientId in wss) {
+
+            let dest = wss[clientId];
+            if (ws === dest){
+                data.origin = true;
+			} else {
+                data.origin = false;
+			}
+            Lib.wsSend(dest, "stateupdate", data);
+        }
+    }
+
 	// Called for all WS requests.
 	function onWebsocket(event) {
 		let ws = event.accept(); // just accept all connections
 
 		Lib.log("SERVER: INITIAL");
+
 
 		// Open is the event when a the connection for a client is opened.
 		// Here we create the client ID and add the WS connection to our collection. Then we add the client ID to
@@ -78,14 +95,24 @@ Shippy.Server = (function() {
 			broadcastState();
 		});
 
+		// TODO Change broadcast based on the successorship list
+		// TODO: what if the successor dies?
 		// Whenever the server receives a message it calls the associated route that's extracted from the payload.
 		// The route will either be a mounted on from the app operations or a private _ one (e.g. _revealdoublerole).
 		ws.addEventListener("message", function(e) {
 			Lib.log("SERVER: MESSAGE");
 			let data = Lib.wsReceive(e);
 			let currentState = Shippy.internal.state();
+			if (!privateRoute(data.route)){
+                Shippy.internal.updateVersion();
+			}
+
 			routes[data.route] && routes[data.route](currentState, data.body);
-			broadcastState();
+            if (!privateRoute(data.route)){
+                broadcastOperation(ws, data.route, data.body);
+			} else {
+            	broadcastState();
+			}
 		});
 
 		// When a client closed the connection we remove it from the succ list and broadcast the state.

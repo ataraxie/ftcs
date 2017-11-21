@@ -6,6 +6,17 @@ Shippy.Client = (function() {
 	// Our (single) WS connection.
 	let ws;
 
+	function evaluate(data) {
+		if (typeof data.state !== 'undefined'){
+			return data;
+		} else {
+			routes[data.route] && routes[data.route](Shippy.internal.state(), data.body);
+            let result = {state: Shippy.internal.state()};
+            result.state.version = data.version;
+            return result;
+		}
+    }
+
 	// Our routes for messages received from the server. These will be called from WS message events.
 	let routes = {
 		// The server accepted us and gave us a clientId. We want to save this so we will know when we should
@@ -22,8 +33,19 @@ Shippy.Client = (function() {
 		// The state was updated. If we don't have the double role we need to tell Shippy to update it's state.
 		stateupdate: function(body) {
 			Lib.log("Client route 'stateupdate' called", body);
+
+			body = evaluate(body);
+
+            let newVersion = body.state.version;
+			let currentVersion = Shippy.internal.version();
+
 			if (!Shippy.internal.serving()) {
-				Shippy.internal.state(body.state);
+				if (currentVersion <= newVersion) {
+                    Shippy.internal.state(body.state);
+				} else {
+                    Lib.wsSend(ws, "_mostuptodate", {state: Shippy.internal.state()});
+                    return;
+				}
 			}
 			Shippy.internal.trigger("stateupdate", body.state);
 		}
@@ -40,6 +62,7 @@ Shippy.Client = (function() {
 			Shippy.internal.connected(true);
 		});
 
+		// TODO when I receive a message, I check whether I' the next successor such that I can send an ACK back
 		// Delegate a received message to the associated route.
 		ws.addEventListener("message", function(e) {
 			Lib.log("CLIENT: MESSAGE");
@@ -57,6 +80,8 @@ Shippy.Client = (function() {
 		ws.addEventListener("error", function(e) {
 			Lib.log("CLIENT: ERROR");
 		});
+
+        routes = Object.assign(routes, Shippy.internal.appSpec().operations);
 	}
 
 	// We as client are responsible for calling the app operations. Essentially this will become

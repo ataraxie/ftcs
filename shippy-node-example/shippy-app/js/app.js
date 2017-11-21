@@ -1,5 +1,10 @@
 (function() {
 
+    var randonNames = [
+        'John Snow', 'Homer Simpson', 'Samus Aran', 'Daenerys Targerian', 'Patrick Kvothe', 'Nadine',
+        'Ned Stark', 'Bart Simpson', 'Billy', 'The Grim Reaper', 'Foo', 'Bar'
+    ];
+
 	let myName; // Will be set from the browser prompt when the site is accessed
 
 	// It's easiest to always build the UI from the current state
@@ -71,10 +76,10 @@
 	// When the document is ready I want to tell the queue app my name such that it knows
 	// what name to add and remove from the queue.
 	$(document).ready(function() {
-		myName = prompt("Please tell me your name");
+		// FIXME: I created this function just to facilitate testing. We can remove it later
+		myName = randonNames[Math.floor(Math.random() * randonNames.length)];
 		$("#myname").text(myName);
 		$("#add-button").click(onAddClick);
 		$("#remove-button").click(onRemoveClick);
 	});
-
 }());
