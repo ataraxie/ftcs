@@ -1,7 +1,7 @@
 /**
  * Only Shippy server-specific logic
  */
-Shippy.Server = (function () {
+Shippy.Server = (function() {
 
 	// Dictionary of web socket connections in form clientId => websocket object
 	let wss = {};
@@ -25,10 +25,7 @@ Shippy.Server = (function () {
 			// This is not optimal. Ideally, instead of sending the most up-to-date state,
 			// the client sends missing operations that need to be added such that the server can reconstruct his state
 			Lib.log("Upon new connection, a client had the most up-to-date state", params.clientId);
-			let successors = Shippy.internal.state().successors;
-			// TODO: change from overriding the entire state to reconstructing the state based on a set of operations
-			Shippy.internal.state(params.state);
-			Shippy.internal.state().successors = successors;
+			Shippy.internal.updateStateKeepSuccessors(params.clientId);
 		}
 	};
 
@@ -67,13 +64,9 @@ Shippy.Server = (function () {
 	function broadcastOperation(ws, route, body) {
 		let data = {route: route, payload: body, version: Shippy.internal.version()};
 		for (let clientId in wss) {
-
 			let dest = wss[clientId];
-			if (ws === dest) {
-				data.origin = true;
-			} else {
-				data.origin = false;
-			}
+			data.origin = ws === dest;
+
 			Lib.wsSend(dest, "stateupdate", data);
 		}
 	}

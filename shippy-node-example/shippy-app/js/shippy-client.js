@@ -25,14 +25,13 @@ Shippy.Client = (function() {
 
 			if (!Shippy.internal.serving()) {
 				let updateFunc = getUpdateFunc(body);
-				updateState(serverMostUpToDate(body), updateFunc);
+				updateState(isServerAhead(body), updateFunc);
 			}
 			Shippy.internal.trigger("stateupdate", Shippy.internal.state());
 		}
 	};
 
-    // I definitively could use a better name here.
-    function serverMostUpToDate(body) {
+    function isServerAhead(body) {
         let currentVersion = Shippy.internal.version();
         let serverVersion = body.version || body.state.version;
 
@@ -50,15 +49,15 @@ Shippy.Client = (function() {
 		}
 		return function () {
             routes[body.route] && routes[body.route](Shippy.internal.state(), body.payload);
-            Shippy.internal.state().version = body.version;
+            Shippy.internal.updateVersion();
         };
     }
 
     // it will check whether the server has a state newer then the client
     // If it does, it will apply the state update function
     // Otherwise, it will send a _mostuptodate message back to the server
-    function updateState(serverMostUpToDate, updateFunc) {
-        if (serverMostUpToDate){
+    function updateState(isServerAhead, updateFunc) {
+        if (isServerAhead){
             updateFunc();
         } else {
             Lib.wsSend(ws, "_mostuptodate", {state: Shippy.internal.state()});

@@ -3,7 +3,7 @@
  *
  * Exposes the interface specified as return statement to the module at the bottom.
  */
-let Shippy = (function () {
+let Shippy = (function() {
 
 	/**
 	 * The Shippy environment. This contains the state, the app name and specification, etc.
@@ -29,7 +29,7 @@ let Shippy = (function () {
 	};
 
 	const time = {
-		defaultWaitingTime: 15000,
+		defaultWaitingTime: 21000,
 		minDecrementTime: 1000,
 		maxDecrementTime: 4000
 	};
@@ -96,6 +96,13 @@ let Shippy = (function () {
 		}
 		Lib.log('Should become server? ' + should);
 		return should;
+	}
+	
+	function updateStateKeepSuccessors(params) {
+		// TODO: change from overriding the entire state to reconstructing the state based on a set of operations
+		let successors = env.state.successors;
+		Object.assign(env.state, params.state);
+		env.state.successors = successors;
 	}
 
 	function addSuccessor(successor) {
@@ -265,6 +272,7 @@ let Shippy = (function () {
 			appName: appName,
 			appSpec: appSpec,
 			state: state,
+			updateStateKeepSuccessors: updateStateKeepSuccessors,
 			currentFlywebService: currentFlywebService,
 			initialHtml: initialHtml,
 			serving: serving,

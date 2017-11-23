@@ -3,14 +3,14 @@
  *
  * Exposes the interface specified as return statement to the module at the bottom.
  */
-Shippy.Storage = (function () {
+Shippy.Storage = (function() {
 
 	/*
 	 * This MIME types were extracted from:
 	 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
 	 * However, this is not a comprehensive list
 	 */
-	var extToMimes = {
+	let extToMimes = {
 		'img': 'image/jpeg',
 		'png': 'image/png',
 		'css': 'text/css',
@@ -31,12 +31,9 @@ Shippy.Storage = (function () {
 
 	// Converts a file to a MIME type
 	function fileToMime(file) {
-		var index = file.lastIndexOf('.');
-		if (index !== -1) {
-			var extension = file.substring(index + 1, file.length);
-			if (extToMimes.hasOwnProperty(extension)) {
-				return extToMimes[extension];
-			}
+		let extension = file.split(".").pop();
+		if (extToMimes.hasOwnProperty(extension)) {
+			return extToMimes[extension];
 		}
 		return extToMimes.default;
 	}
@@ -51,7 +48,7 @@ Shippy.Storage = (function () {
 		}
 
 		// Creates a XMLHttpRequest to extract the content of files referenced through src or href into the index.html
-		var xhr = new XMLHttpRequest(),
+		let xhr = new XMLHttpRequest(),
 			fileReader = new FileReader();
 
 		xhr.open("GET", file, true);
@@ -62,9 +59,9 @@ Shippy.Storage = (function () {
 			if (xhr.status === 200) {
 				// onload needed since Google Chrome doesn't support addEventListener for FileReader
 				fileReader.onload = function (evt) {
-					var content = evt.target.result;
-					var mimeType = fileToMime(file);
-					var data = {mimeType: mimeType, content: content};
+					let content = evt.target.result;
+					let mimeType = fileToMime(file);
+					let data = {mimeType: mimeType, content: content};
 
 					try {
 						sessionStorage.setItem(key, JSON.stringify(data));
@@ -119,7 +116,7 @@ Shippy.Storage = (function () {
 
 	// add style sheet files to the session storage
 	function addStyleSheets() {
-		var styleSheets = document.styleSheets;
+		let styleSheets = document.styleSheets;
 		let getPath = function (styleSheet) {
 			return styleSheet.href;
 		};
@@ -135,18 +132,11 @@ Shippy.Storage = (function () {
 
 	function addHtmls() {
 		let content = Shippy.internal.initialHtml();
-		// if this function is triggered before the internal initial content is loaded, it will keep rescheduling its execution to the next 1s
-		// this may cause one infinite loop or other problems, but at least during testing everything worked fine
-		if (content) {
-			let data = {mimeType: extToMimes.html, content: content};
-			sessionStorage.setItem('/', JSON.stringify(data));
-			Lib.log('File successfully added to session storage', '/');
-			sessionStorage.setItem('/index.html', JSON.stringify(data));
-			Lib.log('File successfully added to session storage', '/index.html');
-		} else {
-			Lib.log('Initial HTML yet not loaded');
-			setTimeout(addHtmls, 1000);
-		}
+		let data = {mimeType: extToMimes.html, content: content};
+		sessionStorage.setItem('/', JSON.stringify(data));
+		Lib.log('File successfully added to session storage', '/');
+		sessionStorage.setItem('/index.html', JSON.stringify(data));
+		Lib.log('File successfully added to session storage', '/index.html');
 	}
 
 	function init() {
