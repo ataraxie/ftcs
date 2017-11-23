@@ -87,11 +87,12 @@ Shippy.Storage = (function() {
 	}
 
 	// Iterate and add files to the session storage based on functions with extract the data required to do so
+	// Only add files which have a source path (src or href).
 	function addFiles(fileList, getPath, getKey, validate) {
 		for (let file of fileList) {
-			if (validate(file)) {
+			let path = getPath(file);
+			if (typeof path !== 'undefined' && path !== "") {
 				let key = getKey(file);
-				let path = getPath(file);
 
 				addFile(path, key);
 			}
@@ -107,11 +108,8 @@ Shippy.Storage = (function() {
 		let getKey = function (script) {
 			return '/'.concat(script.src.replace(script.baseURI, ''));
 		};
-		let validate = function (script) {
-			return script.src !== "";
-		};
 
-		addFiles(scripts, getPath, getKey, validate);
+		addFiles(scripts, getPath, getKey);
 	}
 
 	// add style sheet files to the session storage
@@ -123,11 +121,8 @@ Shippy.Storage = (function() {
 		let getKey = function (styleSheet) {
 			return '/'.concat(styleSheet.href.replace(styleSheet.ownerNode.baseURI, ''));
 		};
-		let validate = function (styleSheet) {
-			return styleSheet.href;
-		};
 
-		addFiles(styleSheets, getPath, getKey, validate);
+		addFiles(styleSheets, getPath, getKey);
 	}
 
 	function addHtmls() {
