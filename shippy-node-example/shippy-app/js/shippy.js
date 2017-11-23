@@ -124,8 +124,12 @@ let Shippy = (function() {
 		waitingTime = time.defaultWaitingTime;
 	}
 
-	function updateVersion() {
-		env.state.version++;
+	function updateVersion(version) {
+		if (version){
+			env.state.version = version;
+		} else {
+			env.state.version++;
+		}
 	}
 
 	// Random number in the interval of [1000 ms to 4000ms]

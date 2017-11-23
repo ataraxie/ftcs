@@ -25,7 +25,7 @@ Shippy.Server = (function() {
 			// This is not optimal. Ideally, instead of sending the most up-to-date state,
 			// the client sends missing operations that need to be added such that the server can reconstruct his state
 			Lib.log("Upon new connection, a client had the most up-to-date state", params.clientId);
-			Shippy.internal.updateStateKeepSuccessors(params.clientId);
+			Shippy.internal.updateStateKeepSuccessors(params);
 		}
 	};
 

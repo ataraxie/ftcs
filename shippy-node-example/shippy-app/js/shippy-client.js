@@ -49,7 +49,7 @@ Shippy.Client = (function() {
 		}
 		return function () {
             routes[body.route] && routes[body.route](Shippy.internal.state(), body.payload);
-            Shippy.internal.updateVersion();
+            Shippy.internal.updateVersion(body.version);
         };
     }
 
