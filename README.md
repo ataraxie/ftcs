@@ -13,6 +13,7 @@ You made it - welcome to a new age of fault-tolerant local Web apps!
 * Optional for usability: you may also need to add the FlyWeb button to the toolbar
   * Burger menu => Customize => Drag FlyWeb item to menu bar
 * Install the Shippy addon
+  * Disable addon verification by setting xpinstall.signatures.required in about:config to false
   * Firefox burger menu => Add-ons => Extensions => Configuration dropdown => Install Add-on From File...
   * Select shippy-addon/shippy-addon.xpi
 
