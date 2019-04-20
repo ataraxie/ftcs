@@ -1,3 +1,4 @@
+
 /**
  * Only Shippy server-specific logic
  */
@@ -45,7 +46,11 @@ Shippy.Server = (function() {
 
 	function onFetch(event) {
 		Shippy.Util.log("ONFETCH");
-		let url = event.request.url;
+
+		let l = document.createElement("a");
+		l.href = event.request.url;
+		let url = l.pathname;
+
 		let file = Shippy.Storage.get(url);
 		if (file) {
 			let options = createOptions(file.mimeType);
@@ -62,7 +67,9 @@ Shippy.Server = (function() {
 
 	// Run through all WS connections and send the state.
 	function broadcastState() {
+		console.log(wss);
 		for (let clientId in wss) {
+			console.log("broadcasting to " + clientId);
 			Shippy.Util.wsSend(wss[clientId], "stateupdate", {state: Shippy.internal.state()});
 		}
 	}
@@ -103,12 +110,18 @@ Shippy.Server = (function() {
 		// Whenever the server receives a message it calls the associated route that's extracted from the payload.
 		// The route will either be a mounted on from the app operations or a private _ one (e.g. _revealdoublerole).
 		ws.addEventListener("message", function(e) {
-			Shippy.Util.log("SERVER: MESSAGE");
 			let data = Shippy.Util.wsReceive(e);
+			console.log(data);
+			Shippy.Util.log("SERVER: MESSAGE");
 			let currentState = Shippy.internal.state();
-
-			if (ws.clientId){
-				Trace.log({ timestamp: Date.now(), event: 'shippy_server_received_'+data.route, source: Shippy.internal.clientId(), from: ws.clientId, pkgSize: Shippy.Util.payloadSize(data)});
+			if (ws.clientId) {
+				Trace.log({
+					timestamp: Date.now(),
+					event: 'shippy_server_received_' + data.route,
+					source: Shippy.internal.clientId(),
+					from: ws.clientId,
+					pkgSize: Shippy.Util.payloadSize(data)
+				});
 			}
 
 			routes[data.route] && routes[data.route](currentState, data.body);

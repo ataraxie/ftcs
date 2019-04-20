@@ -5,7 +5,7 @@
  */
 let Trace = (function () {
 
-	const TRACE_ENABLED = true;
+	const TRACE_ENABLED = false;
 
 	const logKey = 'shippy:log:' + Date.now().toString() + ':' + Math.random().toString();
 
@@ -85,7 +85,7 @@ let Shippy = (function() {
 			successors: [],
 			version: 0,
 		},
-		currentFlywebService: null,
+		currentZerotiesService: null,
 		appName: null,
 		appSpec: null,
 		clientId: null,
@@ -125,6 +125,7 @@ let Shippy = (function() {
 
 	// Register the app
 	function register(appName, appSpec) {
+		console.log("called register");
 		env.appName = appName;
 		env.appSpec = appSpec;
 
@@ -133,9 +134,10 @@ let Shippy = (function() {
 			env.appSpec.init(env.state);
 		}
 
-		// When the app is registered and there is currently no FlyWeb service with that name, we
+		// When the app is registered and there is currently no Zeroties service with that name, we
 		// want to become the server.
-		if (!env.currentFlywebService && shouldBecomeNextServer()) {
+		if (!env.currentZerotiesService && shouldBecomeNextServer()) {
+			console.log("didnt find a service");
 			Shippy.Server.becomeServer();
 		}
 	}
@@ -147,9 +149,9 @@ let Shippy = (function() {
 	}
 
 	// This initial HTML has this flag set to 'server' when the webapp is accessed.
-	// FlyWeb clients will have this flag set to 'client'
+	// Zeroties clients will have this flag set to 'client'
 	function hasServerRole() {
-		return $('html').attr('data-flyweb-role') === 'server';
+		return $('html').attr('data-zeroties-role') === 'server';
 	}
 
 	// Determine if I should become the next server
@@ -207,7 +209,7 @@ let Shippy = (function() {
 
 	// Remove the first successor of the successors list if this successor does not become the new server after T seconds
 	function pruneUnreachableSuccessor() {
-		if (!env.currentFlywebService && !env.isConnected) {
+		if (!env.currentZerotiesService && !env.isConnected) {
 			if (waitingTime <= 0 && env.state.successors[0] !== env.clientId) {
 				Shippy.Util.log('A successor is unreachable after T seconds. Removing first successor from the successor list', env.state.successors);
 				Trace.log({ timestamp: Date.now(), event: 'shippy_client_prune_successor', source: clientId()});
@@ -246,7 +248,7 @@ let Shippy = (function() {
 	function serving(paramServing) {
 		if (typeof paramServing !== 'undefined') {
 			env.serving = paramServing;
-			$('html').attr('data-flyweb-role', serving ? 'server' : 'client');
+			$('html').attr('data-zeroties-role', serving ? 'server' : 'client');
 		} else {
 			return !!env.serving;
 		}
@@ -268,8 +270,8 @@ let Shippy = (function() {
 		}
 	}
 
-	function currentFlywebService() {
-		return env.currentFlywebService;
+	function currentZerotiesService() {
+		return env.currentZerotiesService;
 	}
 
 	function initialHtml() {
@@ -287,20 +289,21 @@ let Shippy = (function() {
 	// This is the event that's regularly triggered from our addon. It always contains a list of services with
 	// a serviceName and serviceUrl field.
 	// Unfortunately, this is not always up-to-date, so we are confronted with delays.
-	window.addEventListener('flywebServicesChanged', function (event) {
+	window.addEventListener('zerotiesServicesChanged', function (event) {
+		console.log("recieved event");
 		// Reinit to null so if we don't find a service for our app right now we will now
-		env.currentFlywebService = null;
+		env.currentZerotiesService = null;
 		if (env.appName) { // If an app was registered
 			let services = JSON.parse(event.detail).services;
 			for (let service of services) {
 				if (service.serviceName === env.appName) { // if this service is for our app
 					trigger("servicefound", service);
-					env.currentFlywebService = service; // then set it in our env
+					env.currentZerotiesService = service; // then set it in our env
 				}
 			}
 
 			// If a service was set and we are not already connected we want to become a client
-			if (env.currentFlywebService && !env.isConnected && !env.isConnecting) {
+			if (env.currentZerotiesService && !env.isConnected && !env.isConnecting) {
 				env.isConnecting = true;
 				resetWaitingTime();
 				Shippy.Client.becomeClient();
@@ -309,23 +312,23 @@ let Shippy = (function() {
 			// and (b) env.isConnected was set to false before due to a disconnect (initially it was null)
 			// and (c) we should become the next server based on the succ list etc.
 			// then really become the server
-			else if (!env.currentFlywebService && env.isConnected === false && shouldBecomeNextServer()) {
+			else if (!env.currentZerotiesService && env.isConnected === false && shouldBecomeNextServer()) {
 				resetWaitingTime();
 				Shippy.Server.becomeServer();
 			}
 			// If I' neither the next server, nor I'm connected I need to keep track of probable unreachable successors
 			// If after some time period now successor has assumed the server role, I need to update my successor list
 			// At some point, I'll be the next server, thus recovering from a chain of consecutive disconnections
-			else if (!env.currentFlywebService && !env.isConnected) {
+			else if (!env.currentZerotiesService && !env.isConnected) {
 				pruneUnreachableSuccessor();
 			}
 		}
-		Shippy.Util.log('Current Flyweb Service: ' + JSON.stringify(env.currentFlywebService));
+		Shippy.Util.log('Current Zeroties Service: ' + JSON.stringify(env.currentZerotiesService));
 	});
 
-	// When the document has loaded, we save the initial HTML such that it can be served by our Flyweb server.
+	// When the document has loaded, we save the initial HTML such that it can be served by our Zeroties server.
 	window.onload = function () {
-		env.initialHtml = '<html data-flyweb-role="client">' + $('html').html() + '</html>';
+		env.initialHtml = '<html data-zeroties-role="client">' + $('html').html() + '</html>';
 		Shippy.Storage.init(); // Get files required to run this app and add them to the session storage.
 	};
 
@@ -353,7 +356,7 @@ let Shippy = (function() {
 			appSpec: appSpec,
 			state: state,
 			updateStateKeepSuccessors: updateStateKeepSuccessors,
-			currentFlywebService: currentFlywebService,
+			currentZerotiesService: currentZerotiesService,
 			initialHtml: initialHtml,
 			serving: serving,
 			shouldBecomeNextServer: shouldBecomeNextServer
@@ -715,7 +718,11 @@ Shippy.Server = (function() {
 
 	function onFetch(event) {
 		Shippy.Util.log("ONFETCH");
-		let url = event.request.url;
+
+		let l = document.createElement("a");
+		l.href = event.request.url;
+		let url = l.pathname;
+
 		let file = Shippy.Storage.get(url);
 		if (file) {
 			let options = createOptions(file.mimeType);
@@ -732,7 +739,9 @@ Shippy.Server = (function() {
 
 	// Run through all WS connections and send the state.
 	function broadcastState() {
+		console.log(wss);
 		for (let clientId in wss) {
+			console.log("broadcasting to " + clientId);
 			Shippy.Util.wsSend(wss[clientId], "stateupdate", {state: Shippy.internal.state()});
 		}
 	}
@@ -773,12 +782,18 @@ Shippy.Server = (function() {
 		// Whenever the server receives a message it calls the associated route that's extracted from the payload.
 		// The route will either be a mounted on from the app operations or a private _ one (e.g. _revealdoublerole).
 		ws.addEventListener("message", function(e) {
-			Shippy.Util.log("SERVER: MESSAGE");
 			let data = Shippy.Util.wsReceive(e);
+			console.log(data);
+			Shippy.Util.log("SERVER: MESSAGE");
 			let currentState = Shippy.internal.state();
-
-			if (ws.clientId){
-				Trace.log({ timestamp: Date.now(), event: 'shippy_server_received_'+data.route, source: Shippy.internal.clientId(), from: ws.clientId, pkgSize: Shippy.Util.payloadSize(data)});
+			if (ws.clientId) {
+				Trace.log({
+					timestamp: Date.now(),
+					event: 'shippy_server_received_' + data.route,
+					source: Shippy.internal.clientId(),
+					from: ws.clientId,
+					pkgSize: Shippy.Util.payloadSize(data)
+				});
 			}
 
 			routes[data.route] && routes[data.route](currentState, data.body);
@@ -928,7 +943,7 @@ Shippy.Client = (function() {
 		}
 	}
 
-	// Become a Shippy client. When this is called there must be already a current Flyweb service available
+	// Become a Shippy client. When this is called there must be already a current Zeroties service available
 	// and its URL will be used for the WS connection.
 	function becomeClient() {
 		Trace.log({ timestamp: Date.now(), event: 'shippy_become_client_begin', source: tempID});
@@ -936,13 +951,12 @@ Shippy.Client = (function() {
 		// This is necessary in the client because state updates may carry operations rather than the entire state
 		routes = Object.assign(routes, Shippy.internal.appSpec().operations);
 		Shippy.Util.log("BECOME CLIENT");
-		ws = new WebSocket("ws://" + Shippy.internal.currentFlywebService().serviceUrl);
+		ws = new WebSocket("ws://" + Shippy.internal.currentZerotiesService().serviceUrl);
 
 		// Tell shippy that we are now connected.
 		ws.addEventListener("open", function(e) {
 			Shippy.Util.log("CLIENT: OPEN");
 			Shippy.internal.connected(true);
-
 		});
 
 		// Delegate a received message to the associated route.
